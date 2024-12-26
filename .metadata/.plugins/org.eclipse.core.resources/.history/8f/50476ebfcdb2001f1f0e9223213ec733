@@ -1,0 +1,31 @@
+package com.pdfQuery.example.pdfQuery.service;
+
+import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.ai.chat.ChatResponse;
+import org.springframework.ai.chat.prompt.Prompt;
+import org.springframework.ai.ollama.OllamaChatClient;
+import reactor.core.publisher.Mono;
+
+@Service
+public class PdfQnAService {
+
+    private final OllamaChatClient ollamaChatClient;
+
+    @Value("${ollama.model:gpt-4}")
+    private String ollamaModel;
+
+    public PdfQnAService(OllamaChatClient ollamaChatClient) {
+        this.ollamaChatClient = ollamaChatClient;
+    }
+
+    public Mono<String> askQuestion(String pdfContent, String question) {
+        String fullPrompt = "PDF Content:\n" + pdfContent + "\n\nQuestion: " + question;
+        Prompt prompt = Prompt.of(fullPrompt, ollamaModel);
+
+        return ollamaChatClient
+                .chat(prompt)
+                .map(ChatResponse::getText)
+                .onErrorReturn("Unable to process the question. Please check the setup or try again.");
+    }
+}

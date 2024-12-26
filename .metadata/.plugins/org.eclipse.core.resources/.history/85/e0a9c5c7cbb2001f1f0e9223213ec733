@@ -1,0 +1,25 @@
+package com.pdfQuery.example.pdfQuery.service;
+
+import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.ai.*;
+
+import reactor.core.publisher.Mono;
+
+@Service
+public class PdfQnAService {
+
+    private final OllamaChatClient ollamaChatClient;
+
+    public PdfQnAService(OllamaChatClient ollamaChatClient) {
+        this.ollamaChatClient = ollamaChatClient;
+    }
+
+    public Mono<String> askQuestion(String pdfContent, String question) {
+        String fullText = pdfContent + "\nQuestion: " + question;
+        Prompt prompt = new Prompt(fullText);
+        return ollamaChatClient.stream(prompt)
+            .next()
+            .map(ChatResponse::getText); // Convert the response into text.
+    }
+}

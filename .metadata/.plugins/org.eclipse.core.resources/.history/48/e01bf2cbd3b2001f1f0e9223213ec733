@@ -1,0 +1,31 @@
+package com.pdfQuery.example.pdfQuery.service;
+
+import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.prompt.Prompt;
+import reactor.core.publisher.Mono;
+
+@Service
+public class PdfQnAService {
+
+    @Value("${ollama.model:llama3.1}")
+    private String ollamaModel;
+
+    private final ChatClient chatClient;
+
+    // Constructor to initialize the chatClient using the builder
+    public PdfQnAService(ChatClient.Builder builder) {
+        this.chatClient = builder.build();
+    }
+
+    // Method to ask a question to the chat client
+    public Mono<String> askQuestion(String pdfContent, String question) {
+        String fullPrompt = "PDF Content:\n" + pdfContent + "\n\nQuestion: " + question;
+        Prompt prompt = Prompt.of(fullPrompt, ollamaModel);
+        return chatClient.prompt()
+                .user(prompt)
+                .call()
+                .content();
+    }
+}

@@ -1,0 +1,28 @@
+package com.pdfQuery.example.pdfQuery.service;
+
+import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@Service
+public class PdfQnAService {
+
+    @Value("${ollama.model:llama3.1}")
+    private String ollamaModel;
+    private final ChatClient chatClient;
+    
+    public ChatController(ChatClient.Builder builder) {
+        this.chatClient = builder.build();
+    }
+
+    public Mono<String> askQuestion(String pdfContent, String question) {
+        String fullPrompt = "PDF Content:\n" + pdfContent + "\n\nQuestion: " + question;
+        Prompt prompt = Prompt.of(fullPrompt, ollamaModel);
+        return chatClient.prompt()
+                .user("Tell me a dad joke about dogs")
+                .call()
+                .content();
+    }
+}

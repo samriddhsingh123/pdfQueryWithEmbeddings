@@ -1,0 +1,12 @@
+package com.pdfQuery.example.pdfQuery;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication(scanBasePackages = "com.pdfQuery.example")
+public class PdfQueryApplication {
+    public static void main(String[] args) {
+        SpringApplication.run(PdfQueryApplication.class, args);
+    }
+}
+

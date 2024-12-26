@@ -1,0 +1,21 @@
+package  com.pdfQuery.example.pdfQuery.service;
+
+import org.springframework.stereotype.Service;
+
+@Service
+public class PdfQnAService {
+
+    private final OllamaService ollamaService;
+
+    public PdfQnAService(OllamaService ollamaService) {
+        this.ollamaService = ollamaService;
+    }
+
+    public String askQuestion(String pdfContent, String question) {
+        // Here you can modify the logic based on how you want to answer the question.
+        // For simplicity, we are directly sending the question to Ollama API with the PDF content.
+        String fullText = pdfContent + "\nQuestion: " + question;
+        System.out.println(fullText);
+        return ollamaService.askOllama(fullText);  // Pass extracted text + question to Ollama API
+    }
+}

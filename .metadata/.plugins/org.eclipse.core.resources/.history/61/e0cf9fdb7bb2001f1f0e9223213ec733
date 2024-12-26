@@ -1,0 +1,21 @@
+package  com.pdfQuery.example.pdfQuery.service;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
+
+@Service
+public class OllamaService {
+    private final RestTemplate restTemplate;
+    private final String ollamaApiUrl;
+
+    public OllamaService(RestTemplate restTemplate, @Value("${ollama.api.url}") String ollamaApiUrl) {
+        this.restTemplate = restTemplate;
+        this.ollamaApiUrl = ollamaApiUrl;
+    }
+
+    public String askOllama(String question) {
+        String requestBody = "{\"prompt\": \"" + question + "\"}";
+        return restTemplate.postForObject(ollamaApiUrl, requestBody, String.class);
+    }
+}

@@ -1,0 +1,21 @@
+package com.pdfQuery.example.pdfQuery.service;
+
+import com.ollama.api.OllamaChatClient;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
+@Service
+public class OllamaService {
+    private final OllamaChatClient ollamaChatClient;
+    private final String ollamaApiUrl;
+
+    public OllamaService(@Value("${ollama.api.url}") String ollamaApiUrl) {
+        this.ollamaChatClient = new OllamaChatClient(ollamaApiUrl);
+        this.ollamaApiUrl = ollamaApiUrl;
+    }
+
+    public String askOllama(String question) {
+        String requestBody = "{\"prompt\": \"" + question + "\"}";
+        return ollamaChatClient.chat(requestBody);  // Use the chat method for responses
+    }
+}

@@ -1,0 +1,38 @@
+package com.pdfQuery.example.pdfQuery.controller;
+
+import com.pdfQuery.example.pdfQuery.service.PdfQnAService;
+import com.pdfQuery.example.utils.PdfProcessor;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.File;
+import java.io.IOException;
+
+@RestController
+@RequestMapping("/pdf")
+public class PdfController {
+    private final PdfProcessor pdfProcessor;
+    private final PdfQnAService pdfQnAService;
+
+    public PdfController(PdfProcessor pdfProcessor, PdfQnAService pdfQnAService) {
+        this.pdfProcessor = pdfProcessor;
+        this.pdfQnAService = pdfQnAService;
+    }
+
+    @PostMapping("/ask")
+    public String askQuestion(@RequestParam String question, @RequestParam MultipartFile file) {
+        try {
+            File tempFile = convertMultipartFileToFile(file);  // Convert MultipartFile to File
+            String pdfContent = pdfProcessor.extractText(tempFile.getAbsolutePath());  // Extract PDF content
+            return pdfQnAService.askQuestion(pdfContent, question);  // Ask question to Ollama
+        } catch (IOException e) {
+            return "Error processing PDF: " + e.getMessage();
+        }
+    }
+
+    private File convertMultipartFileToFile(MultipartFile file) throws IOException {
+        File tempFile = File.createTempFile("upload-", ".pdf");
+        file.transferTo(tempFile);
+        return tempFile;
+    }
+}

@@ -1,0 +1,46 @@
+package com.pdfQuery.example.pdfQuery.controller;
+
+import com.pdfQuery.example.pdfQuery.service.PdfQnAService;
+import com.pdfQuery.example.utils.PdfProcessor;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+import reactor.core.publisher.Mono;
+
+import java.io.File;
+import java.io.IOException;
+
+@RestController
+@RequestMapping("/pdf")
+public class PdfController {
+    
+    private final PdfProcessor pdfProcessor;
+    private final PdfQnAService pdfQnAService;
+
+    public PdfController(PdfProcessor pdfProcessor, PdfQnAService pdfQnAService) {
+        this.pdfProcessor = pdfProcessor;
+        this.pdfQnAService = pdfQnAService;
+    }
+
+    @PostMapping("/ask")
+    public Mono<String> askQuestion(@RequestParam String question, @RequestParam MultipartFile file) {
+        try {
+            // Convert the MultipartFile to a File
+            File tempFile = convertMultipartFileToFile(file);
+            
+            // Process the PDF file to extract text
+            String pdfContent = pdfProcessor.extractText(tempFile.getAbsolutePath());
+            
+            // Ask the question based on the extracted content using Ollama API
+            return pdfQnAService.askQuestion(pdfContent, question);
+        } catch (IOException e) {
+            return Mono.just("Error processing PDF: " + e.getMessage());
+        }
+    }
+
+    // Helper method to convert MultipartFile to File
+    private File convertMultipartFileToFile(MultipartFile file) throws IOException {
+        File tempFile = File.createTempFile("upload-", ".pdf");
+        file.transferTo(tempFile);
+        return tempFile;
+    }
+}
