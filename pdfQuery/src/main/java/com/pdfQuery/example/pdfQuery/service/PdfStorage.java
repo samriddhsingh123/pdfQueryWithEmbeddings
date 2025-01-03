@@ -18,6 +18,8 @@ public class PdfStorage {
         chunks.forEach((chunkId, chunkContent) -> {
             storage.put(chunkId, chunkContent); // Storing the embedding (value)
         });
+//        System.out.println("Strorage++++++::::"+this.storage);
+
     }
 
     // Retrieve chunks by pdfId, returning the chunk content and its embedding
@@ -54,6 +56,15 @@ public class PdfStorage {
                         entry -> new AbstractMap.SimpleEntry<>(entry.getValue().getKey(), entry.getValue().getValue()) // Create SimpleEntry with chunk content and embedding
                 ));
     }
+
+    public Map<String, AbstractMap.SimpleEntry<String, String>> getAllDocuments() {
+        return storage.entrySet().stream()
+                .collect(Collectors.toMap(
+                        Map.Entry::getKey, // Use the chunk ID as the key
+                        entry -> new AbstractMap.SimpleEntry<>(entry.getValue().getKey(), entry.getValue().getValue()) // Create SimpleEntry with chunk content and embedding
+                ));
+    }
+
 
 
 

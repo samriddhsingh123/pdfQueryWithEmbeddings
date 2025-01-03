@@ -35,14 +35,14 @@ public class PdfController {
             String pdfContent = pdfProcessor.extractText(tempFile.getAbsolutePath());
 
             // Debug: Inspect raw PDF content
-            System.out.println("Raw PDF content: " + pdfContent);
+//            System.out.println("Raw PDF content: " + pdfContent);
 
             String id = UUID.randomUUID().toString();
             Map<String, AbstractMap.SimpleEntry<String, String>> chunkEmbeddings = new HashMap<>();
 
             // Clean the content to remove non-printable characters
             String cleanedContent = pdfContent.replaceAll("[\\p{Cntrl}]+", " ").trim();
-            System.out.println("Cleaned content: " + cleanedContent);
+//            System.out.println("Cleaned content: " + cleanedContent);
 
             // Split by paragraphs or fallback to sentences
             String[] initialChunks = cleanedContent.split("\\n{2,}");
@@ -70,7 +70,7 @@ public class PdfController {
             }
 
             // Debug: Check the resulting optimized chunks
-            System.out.println("Optimized Chunks: " + optimizedChunks);
+//            System.out.println("Optimized Chunks: " + optimizedChunks);
 
             for (int i = 0; i < optimizedChunks.size(); i++) {
                 String chunk = optimizedChunks.get(i).trim();
@@ -81,7 +81,7 @@ public class PdfController {
                     chunkEmbeddings.put(id + "::chunk_" + i, new AbstractMap.SimpleEntry<>(chunk, chunkEmbedding));
                 }
             }
-            System.out.println("Chunk Embeddings: " + chunkEmbeddings);
+//            System.out.println("Chunk Embeddings: " + chunkEmbeddings);
 
             // Save both the chunks and their embeddings to pdfStorage with the generated ID
             pdfStorage.save(id, chunkEmbeddings);
@@ -96,27 +96,36 @@ public class PdfController {
 
 
     @GetMapping("/ask")
-    public String askQuestion(@RequestParam String question, @RequestParam String pdfId) {
+    public String askQuestion(@RequestParam String question) {
         long startTime = System.currentTimeMillis();
 
         long stepStart = System.currentTimeMillis();
         String questionVector = pdfQnAService.generateEmbedding(question);
         long stepEnd = System.currentTimeMillis();
         System.out.println("Execution time for pdfQnAService.generateEmbedding: " + (stepEnd - stepStart) + "ms");
+//
+//        stepStart = System.currentTimeMillis();
+//        Map<String, AbstractMap.SimpleEntry<String, String>> pdfContent = pdfStorage.getAllById(pdfId);
+//        stepEnd = System.currentTimeMillis();
+//        System.out.println("Execution time for pdfStorage.getAllById: " + (stepEnd - stepStart) + "ms");
+
+//        stepStart = System.currentTimeMillis();
+//        String matchedContent = pdfQnAService.findBestMatch(pdfContent, questionVector);
+//        System.out.println("Matched Content: "+ matchedContent);
+//        stepEnd = System.currentTimeMillis();
+//        System.out.println("Execution time for pdfQnAService.findBestMatch: " + (stepEnd - stepStart) + "ms");
+
+        Map<String, AbstractMap.SimpleEntry<String, String>> pdfContent2 = pdfStorage.getAllDocuments();
+
 
         stepStart = System.currentTimeMillis();
-        Map<String, AbstractMap.SimpleEntry<String, String>> pdfContent = pdfStorage.getAllById(pdfId);
+        String matchedContent2 = pdfQnAService.findBestMatch(pdfContent2, questionVector);
+        System.out.println("Matched Content: "+ matchedContent2);
         stepEnd = System.currentTimeMillis();
-        System.out.println("Execution time for pdfStorage.getAllById: " + (stepEnd - stepStart) + "ms");
+        System.out.println("Execution time for pdfQnAService.findBestMatch for all pdfs: " + (stepEnd - stepStart) + "ms");
 
         stepStart = System.currentTimeMillis();
-        String matchedContent = pdfQnAService.findBestMatch(pdfContent, questionVector);
-        System.out.println("Matched Content: "+ matchedContent);
-        stepEnd = System.currentTimeMillis();
-        System.out.println("Execution time for pdfQnAService.findBestMatch: " + (stepEnd - stepStart) + "ms");
-
-        stepStart = System.currentTimeMillis();
-        String result = pdfQnAService.askQuestion(matchedContent, question);
+        String result = pdfQnAService.askQuestion(matchedContent2, question);
         stepEnd = System.currentTimeMillis();
         System.out.println("Execution time for pdfQnAService.askQuestion: " + (stepEnd - stepStart) + "ms");
 
