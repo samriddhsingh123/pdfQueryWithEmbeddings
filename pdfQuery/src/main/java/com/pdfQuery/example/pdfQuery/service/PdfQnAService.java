@@ -104,7 +104,6 @@ public class PdfQnAService {
             double similarity = cosineSimilarity(questionVec, chunkVec);
 
             if (similarity > similarityThreshold) {
-                System.out.println("chunk vector: "+chunkVec);
                 topMatches.offer(Map.entry(chunkContent, similarity));
                 if (topMatches.size() > topN) {
                     topMatches.poll();
@@ -112,14 +111,20 @@ public class PdfQnAService {
             }
         }
 
+        if (topMatches.isEmpty()) {
+            return "No close match found.";
+        }
+
         StringBuilder aggregatedContext = new StringBuilder();
         while (!topMatches.isEmpty()) {
             Map.Entry<String, Double> match = topMatches.poll();
-            aggregatedContext.append(match.getKey()).append(" ");
+            System.out.printf("Matched Content: %s (Similarity: %.4f)%n", match.getKey(), match.getValue());
+            aggregatedContext.insert(0, match.getKey() + " ");
         }
 
-        return aggregatedContext.length() > 0 ? aggregatedContext.toString().trim() : "No close match found.";
+        return aggregatedContext.toString().trim();
     }
+
 
 
 

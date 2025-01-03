@@ -132,6 +132,7 @@ public class PdfController {
         long endTime = System.currentTimeMillis();
         System.out.println("Total execution time of askQuestion method: " + (endTime - startTime) + "ms");
 
+        System.out.println("LLM result: "+result);
         return result;
     }
 
