@@ -111,6 +111,7 @@ public class PdfController {
 
         stepStart = System.currentTimeMillis();
         String matchedContent = pdfQnAService.findBestMatch(pdfContent, questionVector);
+        System.out.println("Matched Content: "+ matchedContent);
         stepEnd = System.currentTimeMillis();
         System.out.println("Execution time for pdfQnAService.findBestMatch: " + (stepEnd - stepStart) + "ms");
 

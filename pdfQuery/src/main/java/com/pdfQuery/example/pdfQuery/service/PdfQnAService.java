@@ -1,20 +1,18 @@
 package com.pdfQuery.example.pdfQuery.service;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.apache.commons.math3.linear.RealVector;
 import org.apache.commons.math3.linear.ArrayRealVector;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.MediaType;
-import org.springframework.http.RequestEntity;
 import org.springframework.web.util.UriComponentsBuilder;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.JsonNode;
 
 import java.net.URI;
 import java.util.AbstractMap;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.PriorityQueue;
 
@@ -48,6 +46,18 @@ public class PdfQnAService {
                 .user(fullPrompt)
                 .call()
                 .content();
+    }
+    public String queryLocalModel(String pdfContent, String prompt) {
+        RestTemplate restTemplate = new RestTemplate();
+        String fullPrompt = "PDF Content:\n" + pdfContent + "\n\nQuestion: " + prompt;
+        String apiUrl = "http://localhost:5000/generate";
+
+        Map<String, String> request = new HashMap<>();
+        request.put("prompt", fullPrompt);
+
+        HttpEntity<Map<String, String>> entity = new HttpEntity<>(request);
+        ResponseEntity<String> response = restTemplate.postForEntity(apiUrl, entity, String.class);
+        return response.getBody();
     }
 
     public String generateEmbedding(String content) {
