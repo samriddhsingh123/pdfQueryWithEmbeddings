@@ -3,21 +3,18 @@ package com.pdfQuery.example.pdfQuery.service;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
 import org.apache.commons.math3.linear.RealVector;
 import org.apache.commons.math3.linear.ArrayRealVector;
 import org.springframework.web.util.UriComponentsBuilder;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.JsonNode;
-
-import java.net.URI;
-import java.util.AbstractMap;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.PriorityQueue;
-
 import org.springframework.stereotype.Service;
 import org.springframework.ai.chat.client.ChatClient;
+
+import java.net.URI;
+import java.util.*;
+import java.util.AbstractMap;
+import org.springframework.web.client.RestTemplate;
 
 @Service
 public class PdfQnAService {
@@ -34,30 +31,12 @@ public class PdfQnAService {
         this.chatClient = chatClientBuilder.build(); // Ensure chatClient is initialized
     }
 
-//    public PdfQnAService(ChatClient.Builder chatClientBuilder) {
-//        this.restTemplate = new RestTemplate(); // Provide a default initialization
-//        this.pdfStorage = null; // Initialize as null or inject an appropriate instance
-//        this.chatClient = chatClientBuilder.build(); // Initialize chatClient
-//    }
-
     public String askQuestion(String pdfContent, String question) {
         String fullPrompt = "PDF Content:\n" + pdfContent + "\n\nQuestion: " + question;
         return chatClient.prompt()
                 .user(fullPrompt)
                 .call()
                 .content();
-    }
-    public String queryLocalModel(String pdfContent, String prompt) {
-        RestTemplate restTemplate = new RestTemplate();
-        String fullPrompt = "PDF Content:\n" + pdfContent + "\n\nQuestion: " + prompt;
-        String apiUrl = "http://localhost:5000/generate";
-
-        Map<String, String> request = new HashMap<>();
-        request.put("prompt", fullPrompt);
-
-        HttpEntity<Map<String, String>> entity = new HttpEntity<>(request);
-        ResponseEntity<String> response = restTemplate.postForEntity(apiUrl, entity, String.class);
-        return response.getBody();
     }
 
     public String generateEmbedding(String content) {
@@ -85,26 +64,77 @@ public class PdfQnAService {
     }
 
     private RealVector normalizeVector(RealVector vector) {
-        double norm = vector.getNorm(); // Compute the magnitude of the vector
-        return norm == 0 ? vector : vector.mapDivide(norm); // Divide each element by the norm
+        double norm = vector.getNorm();
+        return norm == 0 ? vector : vector.mapDivide(norm);
     }
 
-    public String findBestMatch(Map<String, AbstractMap.SimpleEntry<String, String>> pdfContent, String questionVector) {
+    // TF-IDF Calculation for the question to weight important tokens
+    private Map<String, Double> calculateTFIDF(String question, List<String> allPdfChunks) {
+        Map<String, Integer> termFrequency = new HashMap<>();
+        for (String token : question.split("\\s+")) {
+            termFrequency.put(token, termFrequency.getOrDefault(token, 0) + 1);
+        }
+
+        Map<String, Double> tfidf = new HashMap<>();
+        int numChunks = allPdfChunks.size();
+
+        for (Map.Entry<String, Integer> entry : termFrequency.entrySet()) {
+            String token = entry.getKey();
+            int docFrequency = 0;
+            for (String chunk : allPdfChunks) {
+                if (chunk.contains(token)) {
+                    docFrequency++;
+                }
+            }
+            double idf = Math.log((double) numChunks / (docFrequency + 1));
+            tfidf.put(token, entry.getValue() * idf); // Term frequency * Inverse document frequency
+        }
+        return tfidf;
+    }
+
+    public String findBestMatch(Map<String, AbstractMap.SimpleEntry<String, String>> pdfContent, String questionVector, String question) {
         RealVector questionVec = normalizeVector(parseVector(questionVector));
         PriorityQueue<Map.Entry<String, Double>> topMatches = new PriorityQueue<>(Map.Entry.comparingByValue());
 
-        int topN = 3;
-        double similarityThreshold = 0.3;
+        int topN = 2;
+        double similarityThreshold = 0.6;
+
+        // Collect all chunks for TF-IDF calculation
+        List<String> allChunks = new ArrayList<>();
+        for (Map.Entry<String, AbstractMap.SimpleEntry<String, String>> entry : pdfContent.entrySet()) {
+            allChunks.add(entry.getValue().getKey());
+        }
+
+        // Calculate TF-IDF for the question
+        Map<String, Double> tfidfScores = calculateTFIDF(question, allChunks);
+        System.out.println("TF-IDF Scores for the question:");
+
+        for (Map.Entry<String, Double> entry : tfidfScores.entrySet()) {
+            System.out.println(entry.getKey() + ": " + entry.getValue());
+        }
+        double questionWeight = 1.5; // Factor to weight question relevance
 
         for (Map.Entry<String, AbstractMap.SimpleEntry<String, String>> entry : pdfContent.entrySet()) {
             String chunkContent = entry.getValue().getKey();
             String chunkEmbedding = entry.getValue().getValue();
+            System.out.println("Chunk Content2: " + chunkContent);
 
             RealVector chunkVec = normalizeVector(parseVector(chunkEmbedding));
             double similarity = cosineSimilarity(questionVec, chunkVec);
 
-            if (similarity > similarityThreshold) {
-                topMatches.offer(Map.entry(chunkContent, similarity));
+            // Apply the TF-IDF weight for each relevant term in the chunk
+            double tfidfFactor = 0.0;
+            for (String token : chunkContent.split("\\s+")) {
+                if (tfidfScores.containsKey(token)) {
+                    tfidfFactor += tfidfScores.get(token);
+                }
+            }
+
+            // Weighted cosine similarity considering TF-IDF
+            double weightedSimilarity = similarity * questionWeight * (1 + tfidfFactor);
+
+            if (weightedSimilarity > similarityThreshold) {
+                topMatches.offer(Map.entry(chunkContent, weightedSimilarity));
                 if (topMatches.size() > topN) {
                     topMatches.poll();
                 }
@@ -118,7 +148,6 @@ public class PdfQnAService {
         StringBuilder aggregatedContext = new StringBuilder();
         while (!topMatches.isEmpty()) {
             Map.Entry<String, Double> match = topMatches.poll();
-            System.out.printf("Matched Content: %s (Similarity: %.4f)%n", match.getKey(), match.getValue());
             aggregatedContext.insert(0, match.getKey() + " ");
         }
 
@@ -126,16 +155,8 @@ public class PdfQnAService {
     }
 
 
-
-
-
-    private String[] splitIntoChunks(String content) {
-        return content.split("(?<=[.!?])\\s+");
-    }
-
-
-    public String getAnswerFromLLM(String question, String matchedContent) {
-        return "Answer based on matched content: " + matchedContent;
+    private String cleanText(String content) {
+        return content.replaceAll("[\\r\\n\\t]", " ").trim();
     }
 
     private RealVector parseVector(String vectorString) {
@@ -155,9 +176,5 @@ public class PdfQnAService {
 
     private double cosineSimilarity(RealVector vector1, RealVector vector2) {
         return vector1.dotProduct(vector2) / (vector1.getNorm() * vector2.getNorm());
-    }
-
-    private String cleanText(String content) {
-        return content.replaceAll("[\\r\\n\\t]", " ").trim();
     }
 }

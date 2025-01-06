@@ -118,8 +118,10 @@ public class PdfController {
         Map<String, AbstractMap.SimpleEntry<String, String>> pdfContent2 = pdfStorage.getAllDocuments();
 
 
+
+
         stepStart = System.currentTimeMillis();
-        String matchedContent2 = pdfQnAService.findBestMatch(pdfContent2, questionVector);
+        String matchedContent2 = pdfQnAService.findBestMatch(pdfContent2, questionVector,question);
         System.out.println("Matched Content: "+ matchedContent2);
         stepEnd = System.currentTimeMillis();
         System.out.println("Execution time for pdfQnAService.findBestMatch for all pdfs: " + (stepEnd - stepStart) + "ms");
