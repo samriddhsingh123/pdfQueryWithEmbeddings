@@ -68,10 +68,28 @@ public class PdfQnAService {
         return norm == 0 ? vector : vector.mapDivide(norm);
     }
 
+    private static final Set<String> STOP_WORDS = Set.of(
+            "a", "an", "the", "and", "or", "but", "if", "then", "else", "when", "at", "by", "for",
+            "in", "of", "on", "to", "with", "is", "was", "are", "were", "be", "been", "being", "have",
+            "has", "had", "do", "does", "did", "not", "no", "yes", "it", "this", "that", "these", "those"
+    );
+
+    private String removeStopWords(String text) {
+        StringBuilder filteredText = new StringBuilder();
+        for (String word : text.split("\\s+")) {
+            if (!STOP_WORDS.contains(word.toLowerCase())) {
+                filteredText.append(word).append(" ");
+            }
+        }
+        return filteredText.toString().trim();
+    }
+
     // TF-IDF Calculation for the question to weight important tokens
     private Map<String, Double> calculateTFIDF(String question, List<String> allPdfChunks) {
+        String filteredQuestion = removeStopWords(question);
+
         Map<String, Integer> termFrequency = new HashMap<>();
-        for (String token : question.split("\\s+")) {
+        for (String token : filteredQuestion.split("\\s+")) {
             termFrequency.put(token, termFrequency.getOrDefault(token, 0) + 1);
         }
 
@@ -87,10 +105,11 @@ public class PdfQnAService {
                 }
             }
             double idf = Math.log((double) numChunks / (docFrequency + 1));
-            tfidf.put(token, entry.getValue() * idf); // Term frequency * Inverse document frequency
+            tfidf.put(token, entry.getValue() * idf);
         }
         return tfidf;
     }
+
 
     public String findBestMatch(Map<String, AbstractMap.SimpleEntry<String, String>> pdfContent, String questionVector, String question) {
         RealVector questionVec = normalizeVector(parseVector(questionVector));
